@@ -2,19 +2,47 @@ package tornadofx.tests
 
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
+import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import org.junit.Assert
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import tornadofx.observable
-import tornadofx.onChange
-import tornadofx.property
-import tornadofx.singleAssign
-import tornadofx.getValue
-import tornadofx.setValue
+import tornadofx.*
+import java.time.LocalDate
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class PropertiesTest {
+    @Test
+    fun quickTest() {
+        val fred = object {
+            val dateProperty = NonNullProperty<LocalDate>(LocalDate.now())
+            var date by dateProperty  // is LocalDate
+            val systemDateProperty = NonNullProperty(LocalDate.now())
+            var systemDate by systemDateProperty  // is LocalDate!, but still null safe
+            val nullableProperty = SimpleObjectProperty<LocalDate?>(LocalDate.MAX)
+            var nullable by nullableProperty  // is LocalDate?
+        }
+
+        // fred.date = null  // Compile error
+        fred.systemDate = null
+        assertNotNull(fred.systemDate)
+        assertNotNull(fred.systemDateProperty.value)
+
+        fred.dateProperty.set(null)
+        assertNotNull(fred.date)
+        assertNotNull(fred.dateProperty.value)
+        fred.date = LocalDate.MIN
+        assert(fred.dateProperty.value == LocalDate.MIN)
+
+        fred.dateProperty.bind(fred.nullableProperty)
+        fred.nullableProperty.value = null
+        assertNull(fred.nullable)
+        assertNotNull(fred.date)
+        assert(fred.dateProperty.isBound)
+    }
+
     @Test
     fun property_delegation() {
         // given:

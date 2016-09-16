@@ -25,6 +25,21 @@ class PropertyDelegate<T>(val fxProperty: Property<T>) : ReadWriteProperty<Any, 
 
 }
 
+class NonNullProperty<T : Any>(
+        val defaultValue: T,
+        bean: Any? = null,
+        name: String = ""
+) : SimpleObjectProperty<T>(bean, name, defaultValue), ReadWriteProperty<Any, T?> {
+    override fun get(): T = super.get() ?: defaultValue
+    override fun set(value: T?) = super.set(value)
+
+    override fun getValue(): T = super.getValue() ?: defaultValue
+    override fun setValue(value: T?) = super.setValue(value)
+
+    override fun getValue(thisRef: Any, property: KProperty<*>): T = get()
+    override fun setValue(thisRef: Any, property: KProperty<*>, value: T?) = set(value)
+}
+
 fun <T> Any.getProperty(prop: KMutableProperty1<*, T>): ObjectProperty<T> {
     // avoid kotlin-reflect dependency
     val field = javaClass.findFieldByName("${prop.name}\$delegate")
@@ -203,7 +218,7 @@ operator fun ObservableFloatValue.getValue(thisRef: Any, property: KProperty<*>)
 operator fun FloatProperty.setValue(thisRef: Any, property: KProperty<*>, value: Float) = set(value)
 
 operator fun ObservableLongValue.getValue(thisRef: Any, property: KProperty<*>) = get()
-operator fun LongProperty.setValue(thisRef: Any, property: KProperty<*>, value: Long)  = set(value)
+operator fun LongProperty.setValue(thisRef: Any, property: KProperty<*>, value: Long) = set(value)
 
 operator fun ObservableIntegerValue.getValue(thisRef: Any, property: KProperty<*>) = get()
 operator fun IntegerProperty.setValue(thisRef: Any, property: KProperty<*>, value: Int) = set(value)
