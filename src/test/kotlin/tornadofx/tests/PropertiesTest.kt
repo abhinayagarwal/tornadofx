@@ -15,11 +15,11 @@ import kotlin.test.assertNull
 
 class PropertiesTest {
     @Test
-    fun quickTest() {
+    fun anyPropertyTest() {
         val fred = object {
-            val dateProperty = NonNullProperty<LocalDate>(LocalDate.now())
+            val dateProperty = SimpleAnyProperty<LocalDate>(LocalDate.now())
             var date by dateProperty  // is LocalDate
-            val systemDateProperty = NonNullProperty(LocalDate.now())
+            val systemDateProperty = SimpleAnyProperty(LocalDate.now())
             var systemDate by systemDateProperty  // is LocalDate!, but still null safe
             val nullableProperty = SimpleObjectProperty<LocalDate?>(LocalDate.MAX)
             var nullable by nullableProperty  // is LocalDate?

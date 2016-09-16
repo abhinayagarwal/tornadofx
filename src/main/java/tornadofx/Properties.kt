@@ -25,7 +25,7 @@ class PropertyDelegate<T>(val fxProperty: Property<T>) : ReadWriteProperty<Any, 
 
 }
 
-class NonNullProperty<T : Any>(
+class SimpleAnyProperty<T : Any>(
         val defaultValue: T,
         bean: Any? = null,
         name: String = ""
