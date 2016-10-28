@@ -741,12 +741,24 @@ class CssRuleSet(val rootRule: CssRule, vararg val subRule: CssSubRule) : Select
             = CssRuleSet(rootRule, *subRule, CssSubRule(ruleSet.rootRule, relation), *ruleSet.subRule)
 }
 
-class CssRule(val prefix: String, name: String, snakeCase: Boolean = true) : Selectable, Scoped, Rendered {
+sealed class CssRule(private val prefix: String, name: String, snakeCase: Boolean = true) : Selectable, Scoped, Rendered {
+    class Element(name: String, snakeCase: Boolean = true) : CssRule(ELEMENT_PREFIX, name, snakeCase)
+    class ID(name: String, snakeCase: Boolean = true) : CssRule(ID_PREFIX, name, snakeCase)
+    class Class(name: String, snakeCase: Boolean = true) : CssRule(CLASS_PREFIX, name, snakeCase)
+    class PseudoClass(name: String, snakeCase: Boolean = true) : CssRule(PSEUDO_CLASS_PREFIX, name, snakeCase)
+
     companion object {
-        fun elem(value: String, snakeCase: Boolean = true) = CssRule("", value.cssValidate(), snakeCase)
-        fun id(value: String, snakeCase: Boolean = true) = CssRule("#", value.cssValidate(), snakeCase)
-        fun c(value: String, snakeCase: Boolean = true) = CssRule(".", value.cssValidate(), snakeCase)
-        fun pc(value: String, snakeCase: Boolean = true) = CssRule(":", value.cssValidate(), snakeCase)
+        const val ELEMENT_PREFIX = ""
+        const val ID_PREFIX = "#"
+        const val CLASS_PREFIX = "."
+        const val PSEUDO_CLASS_PREFIX = ":"
+        operator fun invoke(prefix: String, name: String, snakeCase: Boolean = true) = when (prefix) {
+            ELEMENT_PREFIX -> Element(name, snakeCase)
+            ID_PREFIX -> ID(name, snakeCase)
+            CLASS_PREFIX -> Class(name, snakeCase)
+            PSEUDO_CLASS_PREFIX -> PseudoClass(name, snakeCase)
+            else -> throw IllegalArgumentException("Unrecognized Prefix: $prefix")
+        }
 
         private val name = "\\*|-?[_a-zA-Z][_a-zA-Z0-9-]*"  // According to http://stackoverflow.com/a/449000/2094298
         private val prefix = "[.#:]?"
@@ -816,19 +828,19 @@ fun csspseudoclass(value: String? = null, snakeCase: Boolean = value == null) = 
 inline fun <reified T : Any> cssproperty(value: String? = null) = CssPropertyDelegate<T>(value, MultiValue::class.java.isAssignableFrom(T::class.java))
 
 class CssElementDelegate(val name: String?, val snakeCase: Boolean = name == null) : ReadOnlyProperty<Any, CssRule> {
-    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.elem(name ?: property.name, snakeCase)
+    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.Element(name ?: property.name, snakeCase)
 }
 
 class CssIdDelegate(val name: String?, val snakeCase: Boolean = name == null) : ReadOnlyProperty<Any, CssRule> {
-    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.id(name ?: property.name, snakeCase)
+    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.ID(name ?: property.name, snakeCase)
 }
 
 class CssClassDelegate(val name: String?, val snakeCase: Boolean = name == null) : ReadOnlyProperty<Any, CssRule> {
-    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.c(name ?: property.name, snakeCase)
+    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.Class(name ?: property.name, snakeCase)
 }
 
 class CssPseudoClassDelegate(val name: String?, val snakeCase: Boolean = name == null) : ReadOnlyProperty<Any, CssRule> {
-    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.pc(name ?: property.name, snakeCase)
+    override fun getValue(thisRef: Any, property: KProperty<*>) = CssRule.PseudoClass(name ?: property.name, snakeCase)
 }
 
 class CssPropertyDelegate<T : Any>(val name: String?, val multiValue: Boolean) : ReadOnlyProperty<Any, PropertyHolder.CssProperty<T>> {
@@ -924,23 +936,23 @@ internal fun String.toRuleSet() = if (matches(CssRule.ruleSetRegex)) {
 
 // Style Class
 
-fun Node.hasClass(cssClass: CssRule) = if (cssClass.prefix == ":") hasPseudoClass(cssClass.name) else hasClass(cssClass.name)
+fun Node.hasClass(cssClass: CssRule) = if (cssClass is CssRule.PseudoClass) hasPseudoClass(cssClass.name) else hasClass(cssClass.name)
 
 fun <T : Node> T.addClass(vararg cssClass: CssRule): T {
     cssClass.forEach {
-        if (it.prefix == ":") addPseudoClass(it.name) else addClass(it.name)
+        if (it is CssRule.PseudoClass) addPseudoClass(it.name) else addClass(it.name)
     }
     return this
 }
 
 fun <T : Node> T.removeClass(vararg cssClass: CssRule): T {
     cssClass.forEach {
-        if (it.prefix == ":") removePseudoClass(it.name) else removeClass(it.name)
+        if (it is CssRule.PseudoClass) removePseudoClass(it.name) else removeClass(it.name)
     }
     return this
 }
 
-fun <T : Node> T.toggleClass(cssClass: CssRule, predicate: Boolean) = if (cssClass.prefix == ":") togglePseudoClass(cssClass.name, predicate) else toggleClass(cssClass.name, predicate)
+fun <T : Node> T.toggleClass(cssClass: CssRule, predicate: Boolean) = if (cssClass is CssRule.PseudoClass) togglePseudoClass(cssClass.name, predicate) else toggleClass(cssClass.name, predicate)
 fun <T : Node> T.toggleClass(cssClass: CssRule, observablePredicate: ObservableValue<Boolean>) {
     toggleClass(cssClass, observablePredicate.value ?: false)
     observablePredicate.onChange {
